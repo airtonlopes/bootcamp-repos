@@ -101,3 +101,28 @@ export const IssueList = styled.ul`
 		}
 	}
 `;
+
+export const Controls = styled.form`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 20px;
+
+	button {
+		padding: 5px;
+		background: transparent;
+		border: 1px solid #ddd;
+		width: 100px;
+
+		&[disabled]{
+			cursor: not-allowed;
+			color: #999;
+		}
+	}
+	select {
+		padding: 5px;
+		background: transparent;
+		border: 1px solid #ddd;
+		width: 100px;
+	}
+`;

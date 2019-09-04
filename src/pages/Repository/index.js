@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import api from '../../services';
 import Container from '../../Components/Container';
 
-import { Loading, Owner, IssueList } from './styles';
+import { Loading, Owner, IssueList, Controls } from './styles';
 
 export default class Repository extends Component {
 	static propTypes = {
@@ -19,21 +19,22 @@ export default class Repository extends Component {
 		repository: {},
 		issues: [],
 		loading: true,
+		issuePage: 1,
+		issueState: 'closed'
 	};
 
-	async componentDidMount() {
+	getRepoName() {
 		const { match } = this.props;
-		const repoName = decodeURIComponent(match.params.repository);
+		return decodeURIComponent(match.params.repository);
+	}
 
+	async componentDidMount() {
 		const [repository, issues] = await Promise.all([
-			api.get(`/repos/${repoName}`),
-			api.get(`/repos/${repoName}/issues`, {
-				params: {
-					state: 'open',
-					per_page: 5,
-				},
-			}),
+			api.get(`/repos/${this.getRepoName()}`),
+			this.getIssues(),
 		]);
+
+		console.log(repository.data);
 
 		this.setState({
 			repository: repository.data,
@@ -42,12 +43,51 @@ export default class Repository extends Component {
 		});
 	}
 
+	 changeIssueState = async e => {
+		const state = e.target.value;
+		try {
+			this.setState({loading: true});
+			const {data:issues} = await this.getIssues();
+			this.setState({
+				loading: false,
+				issues: issues,
+				issueState: state,
+			});
+		} catch(err) {
+			console.error(err);
+			this.setState({loading: false});
+		}
+	}
+
+	handlePage = async page => {
+		this.setState({
+			loading: true,
+			issuePage: page==='back' ? --this.state.issuePage : ++this.state.issuePage,
+		});
+		const {data:issues} = await this.getIssues();
+		this.setState({
+			loading: false,
+			issues,
+		});
+	}
+
+	getIssues() {
+		return api.get(`/repos/${this.getRepoName()}/issues`,{
+			params: {
+				state: this.state.issueState,
+				page: this.state.issuePage,
+				per_page: 5,
+			},
+		});
+	}
+
 	render() {
-		const { repository, issues, loading } = this.state;
+		const { repository, issues, issuePage, issueState, loading } = this.state;
 
 		if (loading) {
 			return <Loading>Carregando</Loading>;
 		}
+
 		return (
 			<Container>
 				<Owner>
@@ -59,6 +99,23 @@ export default class Repository extends Component {
 					<h1>{repository.name}</h1>
 					<p>{repository.description}</p>
 				</Owner>
+
+				<Controls>
+					<button
+					type="button"
+					disabled={issuePage < 2}
+					onClick={()=>this.handlePage('back')}
+					>Voltar</button>
+
+					<select defaultValue={issueState} onChange={this.changeIssueState}>
+						<option value="open">open</option>
+						<option value="closed">closed</option>
+						<option value="all">all</option>
+					</select>
+					<button
+					type="button"
+					onClick={()=>this.handlePage('next')}>Avançar</button>
+				</Controls>
 
 				<IssueList>
 					{issues.map(issue => (
